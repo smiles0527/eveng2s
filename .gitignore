@@ -5,3 +5,4 @@ dist/
 
 glasses_*.png
 *.ehpk
+dist-web/

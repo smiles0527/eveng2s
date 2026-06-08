@@ -5,6 +5,7 @@ import { parse } from '../core/parse'
 import { validateCard } from '../core/glyphs'
 import { newCardState } from '../core/scheduler'
 import { todayLocal } from '../core/time'
+import { deckNameFromFilename } from '../core/deck-file'
 
 const el = <K extends keyof HTMLElementTagNameMap>(tag: K, attrs: Record<string, string> = {}) => {
   const node = document.createElement(tag)
@@ -36,6 +37,8 @@ export async function runPhone(storage: Storage, opts: { dev?: boolean } = {}): 
       <section class="deckbar">
         <select id="deckSel" aria-label="Deck"></select>
         <button id="newDeck" class="ghost">New deck</button>
+        <button id="importBtn" class="ghost">Import file</button>
+        <input id="importFile" type="file" accept=".txt,.csv,text/plain" hidden />
       </section>
       <section class="card add">
         <textarea id="paste" rows="4" placeholder="front | back&#10;one card per line ( | or Tab )"></textarea>
@@ -127,6 +130,34 @@ export async function runPhone(storage: Storage, opts: { dev?: boolean } = {}): 
     const meta = await storage.createDeck(name)
     activeId = meta.id
     await storage.setActiveDeckId(activeId)
+    await refresh()
+  }
+
+  const importInput = $<HTMLInputElement>('#importFile')
+  $('#importBtn').onclick = () => importInput.click()
+  importInput.onchange = async () => {
+    const file = importInput.files?.[0]
+    if (!file) return
+    const { cards, skipped } = parse(await file.text())
+    importInput.value = '' // allow re-selecting the same file later
+    if (cards.length === 0) {
+      pasteMsg.textContent = skipped ? `Import: no cards (${skipped} skipped)` : 'Import: file had no cards'
+      return
+    }
+    const name = deckNameFromFilename(file.name)
+    const flagged = cards.filter((c) => !validateCard(c).ok).length
+    const meta = await storage.createDeck(name)
+    activeId = meta.id
+    await storage.setActiveDeckId(activeId)
+    const ok = await appendCards(cards)
+    if (!ok) {
+      pasteMsg.textContent = 'Import failed to save'
+      return
+    }
+    pasteMsg.textContent =
+      `Imported "${name}": ${cards.length}` +
+      (skipped ? `, ${skipped} skipped` : '') +
+      (flagged ? `, ${flagged} flagged` : '')
     await refresh()
   }
 

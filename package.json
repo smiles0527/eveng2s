@@ -6,6 +6,8 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
+    "dev:web": "vite --config vite.web.config.ts",
+    "build:web": "tsc && vite build --config vite.web.config.ts",
     "preview": "vite preview",
     "sim": "evenhub-simulator http://localhost:5173",
     "qr": "evenhub qr --url http://localhost:5173",
