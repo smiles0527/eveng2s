@@ -22,6 +22,7 @@ export interface GameState {
   completedObjectives: string[]
   completedChallenges: string[]
   seenBeats: string[]
+  seenIntro: boolean
   session: { decodesThisHour: number; hourStartMs: number; lastDecodeType?: string }
   lastSeenMs: number
 }
@@ -82,6 +83,8 @@ export interface Objective {
   condition: (s: GameState, d: Derived) => boolean
   reward: { effects?: Effect[]; fragments?: number }
   desc: string
+  /** Short imperative shown as the "Next:" prompt (objectives only). */
+  goal?: string
 }
 
 export type BeatTrigger =

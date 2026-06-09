@@ -38,6 +38,7 @@ const makeState = (over: Partial<GameState> = {}): GameState => ({
   completedObjectives: [],
   completedChallenges: [],
   seenBeats: [],
+  seenIntro: true,
   session: { decodesThisHour: 0, hourStartMs: 0 },
   lastSeenMs: 0,
   ...over,

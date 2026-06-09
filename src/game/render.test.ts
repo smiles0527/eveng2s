@@ -8,6 +8,7 @@ import {
   renderDecode,
   renderObjectives,
   renderBeat,
+  renderIntro,
   type Zones,
 } from './render'
 import { findUnsupported } from '../core/glyphs'
@@ -44,6 +45,7 @@ const makeState = (over: Partial<GameState> = {}): GameState => ({
   completedObjectives: [],
   completedChallenges: [],
   seenBeats: [],
+  seenIntro: true,
   session: { decodesThisHour: 0, hourStartMs: 0 },
   lastSeenMs: 0,
   ...over,
@@ -319,6 +321,31 @@ describe('renderBeat', () => {
   })
 })
 
+// ── renderIntro + the "Next:" prompt ───────────────────────────────────────
+
+describe('renderIntro', () => {
+  it('shows the title, premise, controls, and a start prompt', () => {
+    const card = renderIntro()
+    expect(card).toContain('LOST SIGNAL')
+    expect(card.toLowerCase()).toContain('decode the message')
+    expect(card.toLowerCase()).toContain('begin')
+  })
+})
+
+describe('renderStatus — Next prompt', () => {
+  it('shows the Next line when a goal is given', () => {
+    const z = renderStatus(makeState(), derived(), 'Start your first decode')
+    expect(z.body).toContain('Next: Start your first decode')
+  })
+  it('omits the Next line when goal is null', () => {
+    const z = renderStatus(makeState(), derived(), null)
+    expect(z.body).not.toContain('Next:')
+  })
+  it('idle copy tells the player how to start', () => {
+    expect(renderStatus(makeState(), derived()).body.toLowerCase()).toContain('decode')
+  })
+})
+
 // ── glyph-safe dogfood: every produced string passes findUnsupported ────────
 
 describe('all rendered output is glyph-safe', () => {
@@ -354,8 +381,10 @@ describe('all rendered output is glyph-safe', () => {
 
     const strings: string[] = [
       ...zoneSets.flatMap((z) => [z.header, z.body, z.footer]),
+      ...Object.values(renderStatus(s, d, 'Build 10 antennas')), // Next line variant
       renderBeat(beat),
       renderBeat({ ...beat, title: undefined }),
+      renderIntro(),
       fmt(1_234_567),
       bar(3, 10, 8),
     ]

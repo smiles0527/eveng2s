@@ -10,14 +10,16 @@
 
 import type { Objective, GameState, Derived } from './types'
 
-/** Milestones: cheap booleans over signal rate, buildings, decodes, fragments. */
+/** Milestones, in onboarding order — `nextObjective` surfaces the first
+ *  incomplete one as the "Next:" prompt, so this order is the new-player path. */
 export const OBJECTIVES: Objective[] = [
   {
-    id: 'o.signal100',
-    name: 'First Watt',
-    condition: (_s, d) => d.signalPerSec >= 100,
-    reward: { effects: [{ kind: 'powerCapAdd', value: 1 }] },
-    desc: 'Reach 100 signal/s. Reward: +1 power cap.',
+    id: 'o.firstDecode',
+    name: 'Signal Decoded',
+    condition: (s, _d) => s.decodesCompleted >= 1,
+    reward: { fragments: 5 },
+    desc: 'Complete your first decode. Reward: +5 fragments.',
+    goal: 'Start your first decode',
   },
   {
     id: 'o.antennas10',
@@ -25,13 +27,15 @@ export const OBJECTIVES: Objective[] = [
     condition: (s, _d) => s.owned.antenna >= 10,
     reward: { effects: [{ kind: 'unlockBuilding', id: 'amplifier' }] },
     desc: 'Own 10 antennas. Reward: unlock the amplifier.',
+    goal: 'Build 10 antennas',
   },
   {
-    id: 'o.firstDecode',
-    name: 'Signal Decoded',
-    condition: (s, _d) => s.decodesCompleted >= 1,
-    reward: { fragments: 5 },
-    desc: 'Complete your first decode. Reward: +5 fragments.',
+    id: 'o.signal100',
+    name: 'First Watt',
+    condition: (_s, d) => d.signalPerSec >= 100,
+    reward: { effects: [{ kind: 'powerCapAdd', value: 1 }] },
+    desc: 'Reach 100 signal/s. Reward: +1 power cap.',
+    goal: 'Reach 100 signal/s',
   },
   {
     id: 'o.fragments50',
@@ -39,6 +43,7 @@ export const OBJECTIVES: Objective[] = [
     condition: (s, _d) => s.fragments >= 50,
     reward: { effects: [{ kind: 'signalMult', value: 1.1 }] },
     desc: 'Bank 50 fragments. Reward: +10% signal.',
+    goal: 'Bank 50 fragments',
   },
   {
     id: 'o.reactor',
@@ -46,6 +51,7 @@ export const OBJECTIVES: Objective[] = [
     condition: (s, _d) => s.owned.reactor >= 1,
     reward: { effects: [{ kind: 'unlockFeature', id: 'techTree' }] },
     desc: 'Build a reactor. Reward: reveal the tech tree.',
+    goal: 'Build a reactor',
   },
 ]
 

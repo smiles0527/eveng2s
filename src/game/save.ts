@@ -21,7 +21,7 @@ import type { GameState } from './types'
 // first migration (v1→v2 added `completedChallenges`), so CURRENT_SCHEMA = 2
 // and migrations has exactly one entry. Append-only: migrations[v-1] upgrades
 // a v→v+1 blob.
-const CURRENT_SCHEMA = 2
+const CURRENT_SCHEMA = 3
 const KEY = 'lostsignal.save'
 
 const migrations: Array<(d: unknown) => unknown> = [
@@ -31,6 +31,12 @@ const migrations: Array<(d: unknown) => unknown> = [
     return Array.isArray(s.completedChallenges)
       ? s
       : { ...s, completedChallenges: [] }
+  },
+  // v2 → v3: `seenIntro` was introduced; default false so existing players see
+  // the one-time intro exactly once.
+  (d: unknown) => {
+    const s = (d ?? {}) as Record<string, unknown>
+    return typeof s.seenIntro === 'boolean' ? s : { ...s, seenIntro: false }
   },
 ]
 

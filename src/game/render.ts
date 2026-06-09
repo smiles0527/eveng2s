@@ -154,7 +154,7 @@ function rowsBlock(lines: string[]): string {
 
 /** Status / HQ: vitals header, the active decode (name + progress + remaining)
  *  or an idle line, then a couple of resource counts. */
-export function renderStatus(s: GameState, d: Derived): Zones {
+export function renderStatus(s: GameState, d: Derived, nextGoal: string | null = null): Zones {
   const lines: string[] = []
   const active = s.slots.find((x): x is Extract<Slot, { status: 'running' }> => x.status === 'running')
   const banked = s.slots.filter((x) => x.status === 'banked').length
@@ -167,8 +167,9 @@ export function renderStatus(s: GameState, d: Derived): Zones {
     lines.push(`${bar(elapsed, total, PROGRESS_BAR_W)}  ${clock(remainingS)} left`)
   } else {
     lines.push('RECEIVER IDLE')
-    lines.push('no decode running')
+    lines.push('Swipe to Decode, press to listen') // tells a new player how to start
   }
+  if (nextGoal) lines.push(`Next: ${nextGoal}`)
   lines.push('')
   lines.push(`Fragments ${fmt(s.fragments)}   Banked ${banked}`)
   lines.push(`Antennas ${s.owned.antenna}   Decoders ${s.owned.decoder}`)
@@ -242,6 +243,24 @@ export function renderObjectives(s: GameState): Zones {
 /** Full-screen modal story card: title + body + a continue prompt, centered. */
 export function renderBeat(beat: StoryBeat): string {
   const parts = [beat.title ?? 'SIGNAL', '', beat.body, '', 'tap to continue']
+  return centerBlock(parts.join('\n'), SCREEN_W, SCREEN_H)
+}
+
+/** First-run intro: premise + controls + a start prompt, centered full-screen.
+ *  ASCII/glyph-safe; reuses the same modal path as story beats. */
+export function renderIntro(): string {
+  const parts = [
+    'LOST SIGNAL',
+    '',
+    'A dead receiver stirs. Something is',
+    'transmitting in the static.',
+    'Build signal. Decode the message.',
+    '',
+    'swipe = move   press = open',
+    'double-press = back',
+    '',
+    'press to begin',
+  ]
   return centerBlock(parts.join('\n'), SCREEN_W, SCREEN_H)
 }
 

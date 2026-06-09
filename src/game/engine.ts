@@ -51,6 +51,7 @@ export function newGame(now: number): GameState {
     completedObjectives: [],
     completedChallenges: [],
     seenBeats: [],
+    seenIntro: false,
     session: { decodesThisHour: 0, hourStartMs: now },
     lastSeenMs: now,
   }

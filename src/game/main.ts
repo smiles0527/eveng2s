@@ -9,7 +9,7 @@ import type { EvenAppBridge, EvenHubEvent } from '@evenrealities/even_hub_sdk'
 import { createGameStore } from './save'
 import { newGame, computeMods, derive } from './engine'
 import { reduce, initialUi, type UiState, type UiEvent } from './reducer'
-import { availableTech, availableDecodes } from './selectors'
+import { availableTech, availableDecodes, nextObjective } from './selectors'
 import {
   renderStatus,
   renderBuild,
@@ -17,6 +17,7 @@ import {
   renderDecode,
   renderObjectives,
   renderBeat,
+  renderIntro,
   type Zones,
 } from './render'
 import { createInputGate } from '../glasses/input-gate'
@@ -43,6 +44,7 @@ function tc(c: typeof HDR, capture: 0 | 1, content: string): TextContainerProper
 
 /** Map the UI state to the three on-screen zones. Beats reuse the same zones. */
 function zonesFor(ui: UiState): Zones {
+  if (!ui.game.seenIntro) return { header: '', body: renderIntro(), footer: '' }
   if (ui.beats.length > 0) return { header: '', body: renderBeat(ui.beats[0]), footer: '' }
   const g = ui.game
   const mods = computeMods(g)
@@ -50,7 +52,7 @@ function zonesFor(ui: UiState): Zones {
   const cur = ui.focused ? ui.cursor : -1
   switch (ui.view) {
     case 'status':
-      return renderStatus(g, d)
+      return renderStatus(g, d, nextObjective(g)?.goal ?? null)
     case 'build':
       return renderBuild(g, d, mods, cur)
     case 'tech':

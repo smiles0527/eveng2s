@@ -61,6 +61,20 @@ function applyTick(ui: UiState, now: number): UiState {
 }
 
 export function reduce(ui: UiState, ev: UiEvent): ReduceResult {
+  // First-run intro is modal: it captures input until acknowledged. Time still
+  // advances (tick/lifecycle pass through); any press dismisses it for good.
+  if (!ui.game.seenIntro) {
+    if (ev.type === 'tick') return { state: applyTick(ui, ev.now), effects: [{ type: 'persist' }] }
+    if (ev.type === 'lifecycle') return lifecycle(ui, ev)
+    if (ev.type === 'select' || ev.type === 'back') {
+      return {
+        state: { ...ui, game: { ...ui.game, seenIntro: true } },
+        effects: [{ type: 'persist' }, { type: 'rebuild' }],
+      }
+    }
+    return { state: ui, effects: [] } // swipes ignored under the intro
+  }
+
   // A story beat is modal: it captures input until acknowledged.
   if (ui.beats.length > 0) {
     if (ev.type === 'tick') return { state: applyTick(ui, ev.now), effects: [{ type: 'persist' }] }

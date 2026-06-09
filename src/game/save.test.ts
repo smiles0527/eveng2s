@@ -35,6 +35,7 @@ const sampleState = (over: Partial<GameState> = {}): GameState => ({
   completedObjectives: ['obj.first', 'obj.second'],
   completedChallenges: ['chal.a'],
   seenBeats: ['beat.0', 'beat.1', 'beat.2'],
+  seenIntro: true,
   session: { decodesThisHour: 4, hourStartMs: 900, lastDecodeType: 'morse' },
   lastSeenMs: 6000,
   ...over,
@@ -95,20 +96,29 @@ describe('save — migration', () => {
     const { store, bridge } = makeMockBridge()
     const gs = createGameStore(bridge, { chunkSize: 50_000 })
 
-    // Legacy v1 shape lacked `completedChallenges`; migrations[0] adds it (v1→v2).
-    // We seed raw JSON (no envelope), so unwrap treats it as v1 and runs migrations[0].
-    const { completedChallenges: _drop, ...legacyNoChallenges } = sampleState()
-    store.set('lostsignal.save.0', JSON.stringify(legacyNoChallenges))
+    // Legacy v1 shape lacked completedChallenges AND seenIntro; the migration
+    // chain (v1->v2->v3) defaults both. Raw JSON (no envelope) is treated as v1.
+    const { completedChallenges: _c, seenIntro: _i, ...legacy } = sampleState()
+    store.set('lostsignal.save.0', JSON.stringify(legacy))
     store.set('lostsignal.save._n', '1')
 
-    // Migration defaults the missing field to [] (it cannot recover lost data).
-    const migrated = sampleState({ completedChallenges: [] })
+    const migrated = sampleState({ completedChallenges: [], seenIntro: false })
     const loaded = await gs.load()
     expect(loaded).toEqual(migrated)
 
     // A later save re-writes with the current envelope schemaVersion.
     expect(await gs.save(loaded!)).toBe(true)
-    expect(store.get('lostsignal.save.0')).toContain('"schemaVersion":2')
+    expect(store.get('lostsignal.save.0')).toContain('"schemaVersion":3')
+  })
+
+  it('migrates a v2 save by defaulting seenIntro to false', async () => {
+    const { store, bridge } = makeMockBridge()
+    const gs = createGameStore(bridge)
+    const { seenIntro: _i, ...v2data } = sampleState()
+    store.set('lostsignal.save.0', JSON.stringify({ schemaVersion: 2, data: v2data }))
+    store.set('lostsignal.save._n', '1')
+    const loaded = await gs.load()
+    expect(loaded?.seenIntro).toBe(false)
   })
 })
 

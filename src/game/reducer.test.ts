@@ -3,7 +3,9 @@ import { reduce, initialUi, VIEWS } from './reducer'
 import { newGame } from './engine'
 import type { GameState } from './types'
 
-const ui = (over: Partial<GameState> = {}) => initialUi({ ...newGame(0), ...over })
+// Default past the first-run intro so these exercise normal navigation; the
+// intro itself is covered in its own describe below.
+const ui = (over: Partial<GameState> = {}) => initialUi({ ...newGame(0), seenIntro: true, ...over })
 
 describe('navigation (browsing)', () => {
   it('swipe cycles views and wraps', () => {
@@ -46,6 +48,25 @@ describe('actions', () => {
     const r = reduce(g, { type: 'select' })
     expect(r.state.game.owned.antenna).toBe(1) // unchanged (started with 1)
     expect(r.effects).toEqual([])
+  })
+})
+
+describe('first-run intro is modal', () => {
+  const fresh = () => initialUi(newGame(0)) // seenIntro: false
+
+  it('captures swipes (no nav) until acknowledged', () => {
+    const r = reduce(fresh(), { type: 'navDown' })
+    expect(r.state.view).toBe('status') // unchanged — swipe ignored
+    expect(r.state.game.seenIntro).toBe(false)
+  })
+  it('a press dismisses it and marks it seen + persists', () => {
+    const r = reduce(fresh(), { type: 'select' })
+    expect(r.state.game.seenIntro).toBe(true)
+    expect(r.effects).toContainEqual({ type: 'persist' })
+  })
+  it('once seen, normal navigation resumes', () => {
+    const seen = reduce(fresh(), { type: 'select' }).state
+    expect(reduce(seen, { type: 'navDown' }).state.view).toBe('build')
   })
 })
 
