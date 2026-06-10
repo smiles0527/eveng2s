@@ -64,11 +64,31 @@ function zonesFor(ui: UiState): Zones {
   }
 }
 
-export async function runGame(bridge: EvenAppBridge): Promise<void> {
-  const store = createGameStore(bridge)
-  const loaded = await store.load()
-  let ui: UiState = initialUi(loaded ?? newGame(Date.now()))
+// Reject if a promise outruns `ms`. BLE bridge calls can hang ~30s on real
+// hardware; startup must never block on one. (The flashcards app guards the
+// same way — see src/main.ts.)
+function withTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const id = setTimeout(() => reject(new Error('timeout')), ms)
+    p.then(
+      (v) => {
+        clearTimeout(id)
+        resolve(v)
+      },
+      (e) => {
+        clearTimeout(id)
+        reject(e)
+      },
+    )
+  })
+}
 
+export async function runGame(bridge: EvenAppBridge): Promise<void> {
+  // Paint FIRST — establish the page before touching storage, so the app always
+  // leaves the launcher splash once the bridge is up. Reading the save before
+  // this call would strand the user on "Starting Lost Signal..." whenever the
+  // BLE getLocalStorage hangs (the simulator never reproduces that — its storage
+  // resolves instantly).
   const created = await bridge.createStartUpPageContainer(
     new CreateStartUpPageContainer({
       containerTotalNum: 3,
@@ -79,6 +99,15 @@ export async function runGame(bridge: EvenAppBridge): Promise<void> {
     console.error('createStartUpPageContainer failed:', created)
     return
   }
+
+  // Then load the save — but never let a slow/flaky read block startup. On
+  // timeout or error, start fresh rather than hang.
+  const store = createGameStore(bridge)
+  const loaded = await withTimeout(store.load(), 2500).catch((e) => {
+    console.warn('lostsignal: save load slow/failed; starting fresh', e)
+    return null
+  })
+  let ui: UiState = initialUi(loaded ?? newGame(Date.now()))
 
   // ---- rendering (diffed; same three containers always → only text upgrades) ----
   let last: Zones = { header: '', body: '', footer: '' }
@@ -178,12 +207,15 @@ export async function runGame(bridge: EvenAppBridge): Promise<void> {
   })
   // beforeunload is synchronous — an async save would never flush, so just stop
   // timers/listeners; graceful saves happen on FOREGROUND_EXIT / SYSTEM_EXIT.
-  window.addEventListener('beforeunload', cleanup)
+  if (typeof window !== 'undefined') window.addEventListener('beforeunload', cleanup)
 
   // first catch-up advance + initial render, then the live tick
   await dispatch({ type: 'tick', now: Date.now() })
   startTick()
 }
 
-const bridge = await waitForEvenAppBridge()
-await runGame(bridge)
+// No top-level await (some webviews don't run bundled TLA) — run in an IIFE.
+void (async () => {
+  const bridge = await waitForEvenAppBridge()
+  await runGame(bridge)
+})()
